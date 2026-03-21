@@ -18,7 +18,7 @@ The dataset used for training is the [WikiText-103](https://huggingface.co/datas
 
 - All the main code is located in the [`word2vec.ipynb`](word2vec.ipynb) Jupyter notebook.
 - All the mathematical derivations of computing loss function and gradients are provided in the [`math_derivations.pdf`](math_derivations.pdf) (source TeX file: [`math_derivations.tex`](math_derivations.tex)).
-- Trained model artifacts, including tokenized datase, trained embeddings, and loss logs are located in the [`data/`](data/) directory.
+- Trained model checkpoints are located in the [`data/`](data/) directory.
 
 ### Installation
 
