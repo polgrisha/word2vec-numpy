@@ -14,6 +14,12 @@ This implementation is based on CBOW architecture with negative sampling and inc
 
 The dataset used for training is the [WikiText-103](https://huggingface.co/datasets/Salesforce/wikitext). It consists of over 100 million tokens extracted from Wikipedia articles.
 
+### Project Structure
+
+- All the main code is located in the [`word2vec.ipynb`](word2vec.ipynb) Jupyter notebook.
+- All the mathematical derivations of computing loss function and gradients are provided in the [`math_derivations.pdf`](math_derivations.pdf) (source TeX file: [`math_derivations.tex`](math_derivations.tex)).
+- Trained model artifacts, including tokenized datase, trained embeddings, and loss logs are located in the [`data/`](data/) directory.
+
 ### Installation
 
 This project requires Python 3.11 or higher. The required dependencies can be installed via pip:
@@ -21,11 +27,5 @@ This project requires Python 3.11 or higher. The required dependencies can be in
 ```bash
 pip install -r requirements.txt
 ```
-
-### Project Structure
-
-- All the main code is located in the [`word2vec.ipynb`](word2vec.ipynb) Jupyter notebook.
-- All the mathematical derivations of computing loss function and gradients are provided in the [`math_derivations.pdf`](math_derivations.pdf) (source TeX file: [`math_derivations.tex`](math_derivations.tex)).
-- Trained model artifacts, including tokenized datase, trained embeddings, and loss logs.
 
 
