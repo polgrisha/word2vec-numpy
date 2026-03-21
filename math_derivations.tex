@@ -1,0 +1,91 @@
+\documentclass[11pt]{article}
+\usepackage{amsmath, amssymb}
+\usepackage[margin=1in]{geometry}
+
+\title{Word2Vec (CBOW) with Negative Sampling\\ Mathematical Derivations}
+\author{Gregory Polyakov}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Model}
+
+Continuous bag of words (CBOW) model predicts a target token given its surrounding context. Let $V$ be the vocabulary of the corpus, $d$ be the model hidden dimension. Then the model consists of two learnable matrices:
+
+\begin{itemize}
+    \item $W_{enc} \in \mathbb{R}^{V \times d}$ — input embedding matrix.
+    \item $W_{dec} \in \mathbb{R}^{d \times V}$ — output embedding matrix.
+\end{itemize}
+
+Given the target token $t$ and its surrounding context tokens $ctx$ of the $|ctx|$, the model first computes the average of these token embeddings:
+
+\begin{equation}
+    v^{ctx}_{enc} = \frac{\sum_{i = 1}^{|ctx|} v^{ctx_i}_{enc}}{|ctx|}
+\end{equation}
+
+where $v^{ctx_i}_{enc}$ is the embedding of the context token $ctx_i$ from the input embedding matrix $W_{enc}$.
+
+This context embedding $v^{ctx_i}_{enc}$ is then multiplied by the output embedding matrix $W_{dec}$ to get the scores of output tokens of the size $|V|$. 
+
+\section{Loss Function}
+
+The training objective is to maximize the score of the target token relative to all others. However, to make training efficient, the authors use Negative Sampling (NEG). In this approach, the model maximizes the score of the target token while minimizing the scores of a small set of randomly sampled negative tokens.
+
+Let $neg$ be a set of negative tokens. Let $v^t_{dec}$ be the output embedding of the target token, $v^{neg_i}_{dec}$ be the output embedding of the $i$-th negative token. Then the loss function is defined as follows:
+
+\begin{equation}
+\begin{split}
+    \mathcal{L} &= -\ln(\sigma(s_t)) - \sum_{i=1}^{|neg|}\ln(\sigma(-s_{neg_i})) \\
+                &= -\ln(\sigma({v^{ctx}_{enc}}^\top v^t_{dec})) - \sum_{i=1}^{|neg|}\ln(\sigma(-{v^{ctx}_{enc}}^\top v^{neg_i}_{dec}))
+\end{split}
+\end{equation}
+
+\section{Loss Gradients with Respect to Model Paramters}
+
+In the original paper and code repository, this training objective is optimized using simple stochastic gradient descent (SGD). The gradients of the loss function with respect to $v_{dec}^t$, $v_{dec}^{neg_i}$, and $v_{enc}^{ctx_j}$ are the following.
+
+Gradient with respect to $v_{dec}^t$:
+
+\begin{equation}
+\begin{gathered}
+\frac{\partial \mathcal{L}}{\partial v_{dec}^t} 
+    = - \frac{\partial \ln(\sigma)}{\partial \sigma} \cdot \frac{\partial \sigma(s_t)}{\partial s_t} \cdot \frac{\partial s_t}{\partial v_{dec}^t} = -\frac{1}{\sigma(s_t)} \cdot \sigma(s_t) \cdot (1 - \sigma(s_t)) \cdot \frac{\partial {v^{ctx}_{enc}}^\top v^t_{dec}}{\partial v_{dec}^t} = \\
+    = (\sigma({v^{ctx}_{enc}}^\top v^t_{dec}) - 1) \cdot v^{ctx}_{enc}
+\end{gathered}
+\end{equation}
+
+Gradient with respect to $v_{dec}^{neg_i}$:
+
+\begin{equation}
+\begin{gathered}
+\frac{\partial \mathcal{L}}{\partial v_{dec}^{neg_i}} 
+    = - \frac{\partial \ln(\sigma)}{\partial \sigma} \cdot \frac{\partial \sigma(-s_{neg_i})}{\partial -s_{neg_i}} \cdot \frac{\partial -s_{neg_i}}{\partial v_{dec}^{neg_i}} = \\
+    = \frac{1}{\sigma(-s_{neg_i})} \cdot \sigma(-s_{neg_i}) \cdot (1 - \sigma(-s_{neg_i})) \cdot \frac{\partial {v^{ctx}_{enc}}^\top v^{neg_i}_{dec}}{\partial v_{dec}^{neg_i}} = \\
+    = \sigma({v^{ctx}_{enc}}^\top v^{neg_i}_{dec}) \cdot v^{ctx}_{enc}
+\end{gathered}
+\end{equation}
+
+Gradient with respect to $v_{enc}^{ctx_j}$:
+
+\begin{equation}
+\begin{gathered}
+\frac{\partial \mathcal{L}}{\partial v_{enc}^{ctx_j}} = - \frac{\partial \ln(\sigma)}{\partial \sigma} \cdot \frac{\partial \sigma(s_t)}{\partial s_t} \cdot \frac{\partial s_t}{\partial v_{enc}^{ctx_j}} - \sum_{i=1}^{|neg|} \frac{\partial \ln(\sigma)}{\partial \sigma} \cdot \frac{\partial \sigma(-s_{neg_i})}{\partial -s_{neg_i}} \cdot \frac{\partial -s_{neg_i}}{\partial v_{enc}^{ctx_j}} = \\
+= - \frac{1}{\sigma(s_t)} \cdot \sigma(s_t) \cdot (1 - \sigma(s_t)) \cdot \frac{\partial {v^{ctx}_{enc}}^\top v^t_{dec}}{\partial v_{enc}^{ctx_j}} + \\
++ \sum_{i=1}^{|neg|} \frac{1}{\sigma(-s_{neg_i})} \cdot \sigma(-s_{neg_i}) \cdot (1 - \sigma(-s_{neg_i})) \cdot \frac{\partial {v^{ctx}_{enc}}^\top v^{neg_i}_{dec}}{\partial v_{enc}^{ctx_j}} = \\
+= (\sigma(s_t) - 1) \cdot \frac{\partial \frac{1}{|ctx|} \sum_{j=1}^{|ctx|} {v^{ctx_j}_{enc}}^\top v^t_{dec}}{\partial v^{ctx_j}_{enc}} + \sum_{i = 1}^{|neg|} \sigma(s_{neg_i}) \cdot \frac{\partial \frac{1}{|ctx|} \sum_{j=1}^{|ctx|} {v^{ctx_j}_{enc}}^\top v^{neg_i}_{dec}}{\partial v^{ctx_j}_{enc}} = \\
+= \frac{1}{|ctx|}\left((\sigma({v^{ctx}_{enc}}^\top v^t_{dec}) - 1) \cdot v^{t}_{dec} + \sum_{i = 1}^{|neg|} \sigma({v^{ctx}_{enc}}^\top v^{neg_i}_{dec}) \cdot v^{neg_i}_{dec}\right)
+\end{gathered}
+\end{equation}
+
+\section{Parameter Updates}
+
+The model parameters are updated using SGD with a linearly decaying learning rate $\alpha$:
+
+\begin{equation}
+    v_{dec}^t \leftarrow v_{dec}^t - \alpha \cdot \frac{\partial \mathcal{L}}{\partial v_{dec}^t}, \qquad
+    v_{dec}^{neg_i} \leftarrow v_{dec}^{neg_i} - \alpha \cdot \frac{\partial \mathcal{L}}{\partial v_{dec}^{neg_i}}, \qquad
+    v_{enc}^{ctx_j} \leftarrow v_{enc}^{ctx_j} - \alpha \cdot \frac{\partial \mathcal{L}}{\partial v_{enc}^{ctx_j}}
+\end{equation}
+
+\end{document}
